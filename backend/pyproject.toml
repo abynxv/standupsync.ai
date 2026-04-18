@@ -1,0 +1,35 @@
+[project]
+name = "standupsync-backend"
+version = "0.1.0"
+description = "Backend for StandupSync"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "pydantic[email]",
+    "pydantic-settings",
+    "alembic",
+    "celery",
+    "redis",
+    "google-generativeai",
+    "python-dotenv",
+    "httpx",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
