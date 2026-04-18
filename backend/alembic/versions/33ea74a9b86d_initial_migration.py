@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -20,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Create Enum manually using SQL for better control
+    # Handle Enum creation manually
     op.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN CREATE TYPE userrole AS ENUM ('DEVELOPER', 'TEAM_LEAD', 'ADMIN'); END IF; END $$;")
 
     # 1. Create teams table without foreign keys first
@@ -32,13 +33,13 @@ def upgrade() -> None:
     )
 
     # 2. Create users table with FK to teams
-    # We use a string for the Enum to avoid Alembic trying to create it again
+    # We use postgresql.ENUM with create_type=False to avoid duplicate creation errors
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('hashed_password', sa.String(), nullable=False),
     sa.Column('full_name', sa.String(), nullable=True),
-    sa.Column('role', sa.Enum('DEVELOPER', 'TEAM_LEAD', 'ADMIN', name='userrole'), nullable=False),
+    sa.Column('role', postgresql.ENUM('DEVELOPER', 'TEAM_LEAD', 'ADMIN', name='userrole', create_type=False), nullable=False),
     sa.Column('team_id', sa.Integer(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
@@ -79,4 +80,4 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     op.drop_table('teams')
-    op.execute("DROP TYPE userrole")
+    op.execute("DROP TYPE IF EXISTS userrole")
