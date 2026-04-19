@@ -55,14 +55,37 @@ GEMINI_API_KEY=your_api_key_here
 SECRET_KEY=your_jwt_secret
 ```
 
-### 3. One-Command Start (Hybrid Mode)
-The project is configured for a **Hybrid Setup**: Infrastructure (DB/Redis) runs in Docker, while Application services run locally for faster development feedback.
+### 3. Running the Project
 
+You can run the project in two ways:
+
+#### A. Full Docker Mode (Recommended for Production/QA) 🐳
+This starts the entire stack (Frontend, Backend, DB, Redis, Workers) as isolated containers.
+```bash
+docker compose up --build -d
+```
+*   **Backend API**: [http://localhost:8000](http://localhost:8000)
+*   **Frontend App**: [http://localhost:3000](http://localhost:3000)
+
+#### B. Hybrid Dev Mode (Faster Iteration) 🛠️
+Infrastructure (DB/Redis) runs in Docker, while application services run locally.
 ```bash
 chmod +x sev.sh
 ./sev.sh
 ```
-*This script starts Docker services, runs migrations, and launches the Backend, Worker, and Frontend.*
+
+---
+
+## 🐋 Docker Service Map
+
+| Service | Port | Description |
+| :--- | :--- | :--- |
+| `backend` | `8000` | FastAPI app & Swagger docs |
+| `frontend` | `3000` | React (Vite) served via Nginx |
+| `worker` | - | Celery consumer for AI tasks |
+| `beat` | - | Celery scheduler for automated standups |
+| `db` | `5433` | PostgreSQL 15 database |
+| `redis` | `6380` | Message broker and result backend |
 
 ---
 
@@ -105,10 +128,19 @@ npm run dev
 
 ---
 
-## 🛡 CI/CD
-Every push to `main` triggers:
-1.  **Backend Tests**: Automated verification using `uv` and `pytest`.
-2.  **Image Builds**: Docker images are built and validated to ensure deployment readiness.
+## 🛡 CI/CD Pipeline
+
+The project uses GitHub Actions for automated testing and deployment. Every push to `main` triggers:
+
+1.  **Backend Tests**: Runs `pytest` suite using `uv`.
+2.  **Docker Hub Push**: If tests pass, it builds and pushes images to Docker Hub:
+    *   `username/standupsync-backend`
+    *   `username/standupsync-frontend`
+
+### Required GitHub Secrets
+To enable the pipeline, add these to your repository settings:
+*   `DOCKERHUB_USERNAME`: Your Docker Hub account name.
+*   `DOCKERHUB_TOKEN`: Your Docker Hub Personal Access Token (PAT).
 
 ---
 
