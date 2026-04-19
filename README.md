@@ -41,7 +41,7 @@ graph TD
 
 ### 1. Prerequisites
 Ensure you have the following installed:
-*   [Docker](https://www.docker.com/) & Docker Compose
+*   [Docker](https://www.docker.com/) & Docker Compose (V2)
 *   [uv](https://github.com/astral-sh/uv) (Python manager)
 *   [Node.js](https://nodejs.org/) (v18+)
 
@@ -79,7 +79,7 @@ chmod +x sev.sh
 │   ├── src/            # Components & Logic
 │   └── Dockerfile      # Nginx-based build
 ├── .github/            # CI/CD Workflows
-├── docker-compose.yml  # Infrastructure setup
+├── docker-compose.yml  # Infrastructure setup (V2)
 └── sev.sh              # Unified dev runner
 ```
 

@@ -8,7 +8,7 @@ cleanup() {
     
     # Optional: stop docker containers
     # echo "Stopping Docker infrastructure..."
-    # docker-compose stop db redis
+    # docker compose stop db redis
     
     exit
 }
@@ -20,11 +20,11 @@ echo "🚀 Starting StandupSync Application (Hybrid Setup)..."
 
 # 0. Start Infrastructure via Docker
 echo "🐳 Starting PostgreSQL and Redis via Docker..."
-docker-compose up -d db redis
+docker compose up -d db redis
 
 echo "⏳ Waiting for database to be ready..."
 # Simple wait loop for postgres
-until docker exec $(docker-compose ps -q db) pg_isready -U postgres > /dev/null 2>&1; do
+until docker exec $(docker compose ps -q db) pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 echo "✅ Database is ready!"
@@ -37,28 +37,29 @@ fi
 
 # Activate virtual environment
 source .venv/bin/activate
+VENV_PYTHON="$(pwd)/.venv/bin/python3"
 
 # 1. Run Migrations
 echo "📦 Running database migrations..."
 cd backend
-alembic upgrade head
+$VENV_PYTHON -m alembic upgrade head
 if [ $? -ne 0 ]; then
     echo "⚠️  Migrations failed. Regenerating migration if needed..."
-    alembic revision --autogenerate -m "Initial migration"
-    alembic upgrade head
+    $VENV_PYTHON -m alembic revision --autogenerate -m "Initial migration"
+    $VENV_PYTHON -m alembic upgrade head
 fi
 cd ..
 
 # 2. Start Backend
 echo "Backend API starting on http://localhost:8000..."
 cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+$VENV_PYTHON -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
 cd ..
 
 # 3. Start Celery Worker
 echo "Worker starting..."
 cd backend
-celery -A app.celery_app worker --loglevel=info &
+$VENV_PYTHON -m celery -A app.celery_app worker --loglevel=info &
 cd ..
 
 # 4. Start Frontend
