@@ -1,0 +1,71 @@
+# Backend Deployment (FastAPI)
+#
+# This runs your FastAPI application server. Key things to notice:
+#
+# 1. IMAGE: Points to your Docker Hub image. Replace "your-dockerhub-username"
+#    with your actual username. The CI pipeline pushes images here automatically.
+#
+# 2. envFrom: Loads ALL keys from the ConfigMap as env vars in one shot.
+#    Instead of listing each env var individually, envFrom injects everything.
+#
+# 3. env with secretKeyRef: Loads individual keys from the Secret.
+#    We do this selectively because the Secret has keys with different names
+#    than what the app expects (e.g., GEMINI_API_KEY, SECRET_KEY).
+#
+# 4. readinessProbe: K8s pings /docs every 10s. If the endpoint responds,
+#    the Pod is marked "Ready" and receives traffic. If it fails, the Pod
+#    is removed from the Service until it recovers. This prevents routing
+#    traffic to a Pod that's still starting up.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: standupsync
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: backend
+    spec:
+      containers:
+        - name: backend
+          image: your-dockerhub-username/standupsync-backend:latest
+          # ^^^ REPLACE "your-dockerhub-username" with your Docker Hub username
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: standupsync-config   # Injects DATABASE_URL, CELERY_*, etc.
+          env:
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: GEMINI_API_KEY
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /docs              # Swagger UI endpoint — confirms app is up
+              port: 8000
+            initialDelaySeconds: 10    # Wait 10s before first check (app startup)
+            periodSeconds: 10          # Check every 10s after that
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

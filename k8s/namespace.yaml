@@ -1,0 +1,9 @@
+# Namespace isolates all StandupSync resources from the rest of the cluster.
+# Think of it as a folder — everything we create goes inside "standupsync".
+# To tear down the entire app: kubectl delete namespace standupsync
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: standupsync
+  labels:
+    app: standupsync

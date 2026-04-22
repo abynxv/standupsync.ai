@@ -1,0 +1,60 @@
+# PostgreSQL Deployment
+#
+# A Deployment tells Kubernetes: "I want exactly 1 Pod running postgres:15-alpine,
+# with this configuration, at all times." If the Pod crashes, K8s auto-restarts it.
+#
+# KEY CONCEPTS:
+# - selector.matchLabels: How the Deployment finds its Pods. Must match template.metadata.labels.
+# - volumeMounts: Attaches the PVC to a path inside the container.
+# - envFrom: Pulls ALL keys from a ConfigMap/Secret as environment variables.
+# - env with valueFrom: Pulls a SINGLE key from a Secret.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: postgres
+spec:
+  replicas: 1                    # Only 1 database instance (not horizontally scalable)
+  selector:
+    matchLabels:
+      app: standupsync
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_DB
+              value: "standupsync"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          # Resource limits prevent a single container from eating all cluster resources
+          resources:
+            requests:              # Minimum guaranteed resources
+              cpu: "250m"          # 250 millicores = 0.25 CPU
+              memory: "256Mi"
+            limits:                # Maximum allowed resources
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc

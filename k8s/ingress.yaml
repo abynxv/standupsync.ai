@@ -1,0 +1,54 @@
+# Ingress — Routes external HTTP traffic to internal Services
+#
+# HOW IT WORKS:
+# Ingress is like an Nginx reverse proxy at the cluster edge.
+# It looks at the URL path and routes traffic to the correct Service:
+#   /api/*  →  backend-service:8000
+#   /*      →  frontend-service:80
+#
+# This means you access EVERYTHING through a single URL (the Minikube IP),
+# and the Ingress decides where to send each request.
+#
+# MINIKUBE SETUP:
+# You need to enable the ingress addon first:
+#   minikube addons enable ingress
+#
+# Then get the Minikube IP:
+#   minikube ip
+#
+# Access the app at: http://<minikube-ip>/
+#
+# OPTIONAL: Add a hosts entry for a nice domain:
+#   echo "$(minikube ip) standupsync.local" | sudo tee -a /etc/hosts
+#   Then access: http://standupsync.local/
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: standupsync-ingress
+  namespace: standupsync
+  labels:
+    app: standupsync
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: standupsync.local           # Optional: remove for IP-based access
+      http:
+        paths:
+          # API routes — anything starting with /api goes to backend
+          - path: /api/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8000
+          # Everything else goes to frontend
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
