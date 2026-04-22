@@ -1,0 +1,57 @@
+# Celery Worker Deployment
+#
+# This uses the SAME Docker image as the backend, but overrides the startup
+# command to run the Celery worker instead of Uvicorn.
+#
+# KEY CONCEPT: In Docker Compose, we did the same thing — the "worker" service
+# uses `build: ./backend` (same image) but sets a different `command`.
+# In K8s, we override the command with `args`.
+#
+# NO SERVICE NEEDED: Workers don't receive HTTP traffic. They only consume
+# tasks from the Redis queue and process them. They're "pull-based", not "push-based".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: worker
+spec:
+  replicas: 1                  # Scale up for higher task throughput
+  selector:
+    matchLabels:
+      app: standupsync
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: your-dockerhub-username/standupsync-backend:latest
+          # ^^^ Same image as backend — different command
+          command: ["uv", "run", "celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: standupsync-config
+          env:
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: GEMINI_API_KEY
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: SECRET_KEY
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

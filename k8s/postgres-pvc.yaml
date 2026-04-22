@@ -1,0 +1,23 @@
+# PersistentVolumeClaim (PVC) requests storage from the cluster.
+#
+# WHY THIS MATTERS:
+# Without a PVC, PostgreSQL data lives inside the Pod's container filesystem.
+# When the Pod restarts (which K8s does often — rollouts, node failures, OOM kills),
+# all data is lost. A PVC gives PostgreSQL a "hard drive" that survives Pod restarts.
+#
+# In Minikube, storage is backed by your local disk via the "standard" StorageClass.
+# In production (AWS/GCP), it would be an EBS volume or Persistent Disk.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce        # Only one Pod can mount this volume at a time
+  resources:
+    requests:
+      storage: 1Gi         # 1 GB is plenty for dev. Increase for production.

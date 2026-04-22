@@ -1,0 +1,37 @@
+# Redis Deployment
+#
+# Redis serves as both the Celery message broker (task queue) and
+# the result backend (stores task results). Single replica is fine
+# for dev — in production you'd use Redis Cluster or a managed service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: standupsync
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

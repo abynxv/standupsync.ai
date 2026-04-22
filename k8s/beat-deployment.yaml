@@ -1,0 +1,48 @@
+# Celery Beat Deployment (Scheduler)
+#
+# Beat is the periodic task scheduler. It wakes up at configured intervals
+# and publishes tasks to the Redis queue for workers to consume.
+#
+# CRITICAL: replicas MUST be 1. If you run multiple Beat instances, each one
+# will schedule the same tasks independently, causing duplicate execution
+# (e.g., sending the weekly digest email twice).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beat
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: beat
+spec:
+  replicas: 1                  # NEVER increase this — causes duplicate tasks
+  selector:
+    matchLabels:
+      app: standupsync
+      component: beat
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: beat
+    spec:
+      containers:
+        - name: beat
+          image: your-dockerhub-username/standupsync-backend:latest
+          command: ["uv", "run", "celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: standupsync-config
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: SECRET_KEY
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

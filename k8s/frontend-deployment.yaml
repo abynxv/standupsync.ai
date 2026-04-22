@@ -1,0 +1,43 @@
+# Frontend Deployment (React + Nginx)
+#
+# The multi-stage Dockerfile builds React into static files,
+# then Nginx serves them. The container listens on port 80.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: standupsync
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: standupsync
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: your-dockerhub-username/standupsync-frontend:latest
+          # ^^^ REPLACE "your-dockerhub-username" with your Docker Hub username
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"

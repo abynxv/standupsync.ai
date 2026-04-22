@@ -1,0 +1,30 @@
+# PostgreSQL Service
+#
+# A Service gives Pods a stable DNS name and load-balances traffic to them.
+#
+# WHY YOU NEED THIS:
+# Pods get random IPs that change on every restart. Without a Service, the backend
+# would need to discover PostgreSQL's current IP every time it restarts — impossible.
+# With this Service, the backend just connects to "postgres-service:5432" and K8s
+# routes the traffic to the correct Pod automatically.
+#
+# TYPE: ClusterIP (default)
+# - Only accessible from INSIDE the cluster. No external access.
+# - Perfect for databases — they should never be exposed to the internet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: standupsync
+    component: postgres       # Routes traffic to Pods with these labels
+  ports:
+    - port: 5432              # Port the Service listens on
+      targetPort: 5432        # Port the container is listening on
+      protocol: TCP
