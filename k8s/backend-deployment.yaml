@@ -2,7 +2,7 @@
 #
 # This runs your FastAPI application server. Key things to notice:
 #
-# 1. IMAGE: Points to your Docker Hub image. Replace "your-dockerhub-username"
+# 1. IMAGE: Points to your Docker Hub image (abynxv/standupsync-backend).
 #    with your actual username. The CI pipeline pushes images here automatically.
 #
 # 2. envFrom: Loads ALL keys from the ConfigMap as env vars in one shot.
@@ -38,8 +38,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: your-dockerhub-username/standupsync-backend:latest
-          # ^^^ REPLACE "your-dockerhub-username" with your Docker Hub username
+          image: abynxv/standupsync-backend:latest
+          imagePullPolicy: Never   # Use locally loaded image (minikube image load)
           ports:
             - containerPort: 8000
           envFrom:

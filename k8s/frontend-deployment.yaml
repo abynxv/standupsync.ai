@@ -24,8 +24,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: your-dockerhub-username/standupsync-frontend:latest
-          # ^^^ REPLACE "your-dockerhub-username" with your Docker Hub username
+          image: abynxv/standupsync-frontend:latest
+          imagePullPolicy: Never   # Use locally loaded image
           ports:
             - containerPort: 80
           readinessProbe:

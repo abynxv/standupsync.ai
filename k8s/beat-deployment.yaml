@@ -28,7 +28,8 @@ spec:
     spec:
       containers:
         - name: beat
-          image: your-dockerhub-username/standupsync-backend:latest
+          image: abynxv/standupsync-backend:latest
+          imagePullPolicy: Never   # Use locally loaded image
           command: ["uv", "run", "celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
           envFrom:
             - configMapRef:

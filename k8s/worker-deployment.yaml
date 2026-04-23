@@ -31,8 +31,8 @@ spec:
     spec:
       containers:
         - name: worker
-          image: your-dockerhub-username/standupsync-backend:latest
-          # ^^^ Same image as backend — different command
+          image: abynxv/standupsync-backend:latest
+          imagePullPolicy: Never   # Use locally loaded image
           command: ["uv", "run", "celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
           envFrom:
             - configMapRef:
