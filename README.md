@@ -360,6 +360,74 @@ uv run alembic downgrade -1                               # Rollback last migrat
 
 ---
 
+## 🧠 Deep Dive: Backend Engineer Perspective
+
+This section explains exactly what happens under the hood across the entire CI/CD and Deployment pipeline.
+
+### 1. Docker Build & Registry Flow
+
+#### The Multi-Stage Build Strategy
+In our `frontend/Dockerfile`, we use a **Multi-Stage Build**.
+- **Stage 1 (Build)**: We use a heavy Node.js image to compile the React code into static assets. This includes all the `node_modules` (hundreds of MBs).
+- **Stage 2 (Production)**: We only copy the small `/dist` folder into a lightweight Nginx image.
+**Result**: The final image is ~20MB instead of ~500MB, reducing deployment time and security surface area.
+
+#### The Image Registry (Push/Pull)
+- **Push**: Success in your Local Environment (or GitHub Actions) is followed by `docker push`. This uploads the layers to **Docker Hub**. Each layer is unique; if only your code changes but dependencies don't, only the code layer is uploaded.
+- **Pull**: When Kubernetes starts a Pod, the Kubelet on the node runs `docker pull`. It only downloads missing layers. Using `latest` as a tag is risky in production; we use `latest` for local dev but **commit SHAs** for production to ensure exactly what was tested is what runs.
+
+### 2. CI/CD: The GitHub Actions Engine
+
+The `.github/workflows/ci.yml` is the orchestrator.
+- **Automated Testing**: On every PR/Push, it starts a fresh Ubuntu runner, installs `uv`, and runs `pytest`. If tests fail, the pipeline stops—preventing broken code from ever reaching the registry.
+- **Buildx**: We use `docker/setup-buildx-action`. Buildx is the next-gen Docker build engine that allows building for multiple architectures (like ARM and x64) and advanced layer caching.
+
+### 3. Kubernetes: The Orchestration Layer
+
+Kubernetes doesn't just "run" containers; it maintains "Desired State".
+
+#### Key Controller Mechanics:
+- **Deployment**: If a container crashes, the **ReplicaSet** controller notices the "Actual State" (0 pods) doesn't match the "Desired State" (1 pod) and instantly schedules a replacement.
+- **Service (ClusterIP vs NodePort)**:
+  - `ClusterIP`: A virtual IP available only inside the cluster. Databases use this for security.
+  - `NodePort`: Opens a specific port (30000-32767) on EVERY node in your cluster. This is how we access the app locally via `minikube service`.
+- **ConfigMaps & Secrets**: Instead of hardcoding credentials, we "mount" them as Environment Variables. This allows the SAME container image to run in Dev, Staging, and Production by just changing the ConfigMap/Secret attached to it.
+- **Readiness Probes**: The `backend-deployment.yaml` has a probe that pings `/docs`. If your backend takes 30s to start (e.g., waiting for migrations), K8s won't send a single request to it until it responds 200 OK. This enables **Zero-Downtime Deployments**.
+
+### 4. ArgoCD: The GitOps Heart
+
+ArgoCD implements the **Pull Model** of deployment.
+
+- **Sync Loop**: ArgoCD continuously compares your `k8s/*.yaml` files in GitHub with the resources running in your Minikube/Cluster.
+- **Self-Healing**: If you manually change a Service port via `kubectl` (manual "drifts"), ArgoCD will notice and **automatically change it back** to what's in Git. Git is the "Single Source of Truth".
+- **Application Manifest (`k8s/argocd-app.yaml`)**: This is the configuration for ArgoCD itself. It tells Argo: "Watch repository X, path Y, and ensure the Cluster namespace Z looks exactly like that."
+
+---
+
+## 🛠 Kubernetes Commands (Cheat Sheet)
+
+### Cluster Management
+```bash
+minikube status              # Check if the cluster is alive
+minikube dashboard           # Open a GUI to see everything
+minikube ip                  # Get the cluster IP address
+```
+
+### Resource Inspection
+```bash
+kubectl get pods -n standupsync       # See all app pods
+kubectl logs -f <pod_name> -n standupsync  # Stream logs
+kubectl describe pod <pod_name> -n standupsync # See events/errors
+```
+
+### Accessing Services
+```bash
+minikube service frontend-service -n standupsync --url # Get the FE URL
+minikube service backend-service -n standupsync --url  # Get the BE URL
+```
+
+---
+
 ## License
 
 MIT
