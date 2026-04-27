@@ -425,7 +425,6 @@ kubectl describe pod <pod_name> -n standupsync # See events/errors
 minikube service frontend-service -n standupsync --url # Get the FE URL
 minikube service backend-service -n standupsync --url  # Get the BE URL
 ```
-
 ---
 
 ## License
