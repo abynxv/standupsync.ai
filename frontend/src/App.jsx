@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, CheckCircle2, ArrowRightCircle, AlertOctagon, LayoutDashboard, Sparkles, Plus, Clock, FileText, Calendar } from 'lucide-react'
 import './App.css'
 
 function App() {
@@ -140,15 +140,15 @@ function App() {
         <div className="auth-card">
           <div className="auth-header">
             <img src="/logo.png" alt="StandupSync" className="auth-logo" />
-            <h1 className="auth-title">StandupSync</h1>
+            <h1 className="auth-title gradient-text">StandupSync</h1>
             <p className="auth-subtitle">
-              {view === 'login' ? 'Sign in to your account' : 'Create a new account'}
+              {view === 'login' ? 'Welcome back, sign in below.' : 'Start your journey with us.'}
             </p>
           </div>
 
           <form onSubmit={view === 'login' ? handleLogin : handleRegister}>
             {view === 'register' && (
-              <div className="form-group">
+              <div className="form-group animate-slide-down">
                 <label className="form-label" htmlFor="fullName">Full Name</label>
                 <input
                   id="fullName"
@@ -188,8 +188,14 @@ function App() {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-              {loading ? 'Processing...' : (view === 'login' ? 'Sign In' : 'Create Account')}
+            <button type="submit" className="btn btn-primary btn-full" disabled={loading} style={{ marginTop: '1rem' }}>
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={16} className="animate-spin" /> Processing...
+                </span>
+              ) : (
+                view === 'login' ? 'Sign In' : 'Create Account'
+              )}
             </button>
           </form>
 
@@ -209,7 +215,7 @@ function App() {
 
   /* ==================== DASHBOARD VIEW ==================== */
   return (
-    <div>
+    <>
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-brand">
@@ -230,15 +236,21 @@ function App() {
       </nav>
 
       {/* Dashboard Grid */}
-      <div className="dashboard">
+      <div className="dashboard animate-fade-in">
         {/* Main Content */}
         <div>
           {/* Standup Form */}
           <div className="card">
-            <h3 className="card-title">Log Today's Standup</h3>
+            <h3 className="card-title">
+              <Plus size={20} className="text-primary" />
+              Log Today's Standup
+            </h3>
             <form onSubmit={submitStandup}>
               <div className="form-group">
-                <label className="form-label" htmlFor="did">What did you do yesterday?</label>
+                <label className="form-label" htmlFor="did">
+                  <CheckCircle2 size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                  What did you do yesterday?
+                </label>
                 <textarea
                   id="did"
                   className="form-textarea"
@@ -249,7 +261,10 @@ function App() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="doing">What are you doing today?</label>
+                <label className="form-label" htmlFor="doing">
+                  <ArrowRightCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                  What are you doing today?
+                </label>
                 <textarea
                   id="doing"
                   className="form-textarea"
@@ -260,7 +275,10 @@ function App() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="blockers">Blockers (optional)</label>
+                <label className="form-label" htmlFor="blockers">
+                  <AlertOctagon size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                  Blockers (optional)
+                </label>
                 <textarea
                   id="blockers"
                   className="form-textarea"
@@ -270,43 +288,59 @@ function App() {
                 />
               </div>
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary">Submit Update</button>
+                <button type="submit" className="btn btn-primary">
+                  Submit Update
+                </button>
               </div>
             </form>
           </div>
 
           {/* Past Entries */}
-          <div className="entries-header" style={{ marginTop: '2rem' }}>
-            <h3 className="entries-title">Timeline</h3>
-            <span className="entries-count">{standups.length} entries</span>
+          <div className="entries-header" style={{ marginTop: '2.5rem' }}>
+            <h3 className="entries-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <LayoutDashboard size={20} />
+              Timeline
+            </h3>
+            <span className="entries-count">{standups.length} updates</span>
           </div>
 
           {standups.length === 0 ? (
             <div className="empty-state">
+              <FileText size={48} className="empty-state-icon" />
               <p className="empty-state-text">No entries yet. Log your first standup above!</p>
             </div>
           ) : (
             standups.map((entry) => (
               <div key={entry.id} className="entry-card">
                 <div className="entry-date">
+                  <Calendar size={14} />
                   {new Date(entry.date).toLocaleDateString('en-US', {
-                    weekday: 'short', month: 'short', day: 'numeric'
+                    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
                   })}
                 </div>
                 <div className="entry-grid">
                   <div>
-                    <div className="entry-section-label done">DONE</div>
+                    <div className="entry-section-header">
+                      <CheckCircle2 size={14} className="entry-section-icon done" />
+                      <span className="entry-section-label">Completed</span>
+                    </div>
                     <p className="entry-section-text">{entry.did_yesterday}</p>
                   </div>
                   <div>
-                    <div className="entry-section-label next">NEXT</div>
+                    <div className="entry-section-header">
+                      <ArrowRightCircle size={14} className="entry-section-icon next" />
+                      <span className="entry-section-label">In Progress</span>
+                    </div>
                     <p className="entry-section-text">{entry.doing_today}</p>
                   </div>
                 </div>
                 {entry.blockers && (
                   <div className="entry-blockers">
-                    <div className="entry-blockers-label">BLOCKERS</div>
-                    <p className="entry-blockers-text">{entry.blockers}</p>
+                    <AlertOctagon size={16} className="entry-blockers-icon" />
+                    <div className="entry-blockers-content">
+                      <div className="entry-blockers-label">Blockers</div>
+                      <p className="entry-blockers-text">{entry.blockers}</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -317,19 +351,23 @@ function App() {
         {/* Sidebar */}
         <div>
           <div className="sidebar-card">
-            <h3 className="sidebar-title">AI Weekly Summary</h3>
+            <h3 className="sidebar-title">
+              <Sparkles size={20} className="text-primary" />
+              AI Weekly Summary
+            </h3>
             <p className="sidebar-text">
-              Your weekly productivity digest is generated every Friday based on your daily updates.
+              Your intelligent weekly digest is generated every Friday based on your daily updates and blockers.
             </p>
             <div className="sidebar-placeholder">
-              <p className="sidebar-placeholder-text">No summary generated yet.</p>
+              <Sparkles size={24} style={{ color: 'var(--color-border)' }} />
+              <p className="sidebar-placeholder-text">Gathering insights... No summary generated yet.</p>
             </div>
 
-            <h4 className="form-label">Quick Stats</h4>
+            <h4 className="form-label" style={{ marginTop: '2rem', marginBottom: '1rem' }}>Productivity Stats</h4>
             <div className="stats-grid">
               <div className="stat-box">
                 <div className="stat-value">{standups.length}</div>
-                <div className="stat-label">Updates</div>
+                <div className="stat-label">Total Updates</div>
               </div>
               <div className="stat-box">
                 <div className="stat-value primary">
@@ -341,7 +379,7 @@ function App() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
