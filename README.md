@@ -427,6 +427,61 @@ minikube service backend-service -n standupsync --url  # Get the BE URL
 ```
 ---
 
+## Next Steps
+
+> What needs to be done after the current stage. Ordered by priority.
+
+### 1. Backend — Wire Up Incomplete Endpoints
+
+- [ ] **Summary routes are stubs** — `GET /summaries/me` and `GET /summaries/team` both return empty lists. Need to query the `weekly_summaries` table and return actual data.
+- [ ] **Save generated summaries to DB** — `send_weekly_digests` task calls `generate_summary()` and emails it, but never persists the result into the `WeeklySummary` model. Add a DB write after generation.
+- [ ] **Admin routes** — `admin.py` exists but is minimal. Add user management endpoints (list users, change roles, deactivate accounts).
+
+### 2. Backend — Celery Beat Schedule
+
+- [ ] **Activate the beat schedule** — The crontab config for `send_weekly_digests` is commented out in `tasks/digest.py`. Move it to the actual Celery app config (`celery_app.py`) and enable `beat_schedule` so weekly digests auto-trigger every Friday at 9 AM.
+
+### 3. Backend — Email Service
+
+- [ ] **Replace email placeholder** — `email_service.py` just logs to stdout. Integrate a real provider (SendGrid, AWS SES, or SMTP) and add proper error handling / retry logic.
+
+### 4. Backend — Testing
+
+- [ ] **Write tests** — `backend/tests/` exists but coverage is unclear. Add tests for:
+  - Auth flow (register → login → token → /me)
+  - Standup CRUD (create, list, duplicate-date check)
+  - AI summary generation (mock the Gemini API call)
+  - RBAC enforcement (developer vs team_lead vs admin)
+
+### 5. Frontend — Missing Features
+
+- [ ] **Display AI weekly summaries** — The sidebar shows "No summary generated yet" as a static placeholder. Fetch from `GET /summaries/me` and render the actual digest when available.
+- [ ] **Toast notifications** — Replace `alert()` calls with proper toast notifications for success/error feedback.
+- [ ] **Edit / delete standups** — No way to edit or remove a standup entry after submission.
+- [ ] **Team view** — No UI for team leads to view their team's standups or summaries.
+- [ ] **Profile / settings page** — No way to change password or update profile info.
+
+### 6. Frontend — Polish
+
+- [ ] **Loading states** — Add skeleton loaders or spinners while fetching standups and user data.
+- [ ] **Mobile responsiveness** — Sidebar hides on mobile; consider a collapsible panel or tab-based layout.
+- [ ] **Error boundary** — Add a React error boundary so the whole app doesn't crash on a component error.
+
+### 7. Infrastructure — Kubernetes
+
+- [ ] **Write K8s manifests** — `k8s/` directory doesn't exist yet. Create Deployments, Services, ConfigMaps, Secrets, and Ingress as described in the README's planned section.
+- [ ] **ArgoCD application manifest** — Create `k8s/argocd-app.yaml` pointing to the manifests repo.
+- [ ] **CI pipeline: update image tags** — Add a step in GitHub Actions to update the K8s manifest with the new SHA-tagged image after a successful build.
+
+### 8. Security & Production Readiness
+
+- [ ] **CORS configuration** — Tighten CORS to only allow the frontend origin (currently likely `*`).
+- [ ] **Rate limiting** — Add rate limiting on auth endpoints to prevent brute-force attacks.
+- [ ] **Input validation** — Ensure standup text fields have max-length constraints in both Pydantic schemas and DB columns.
+- [ ] **Environment-based config** — Ensure `SECRET_KEY` and `GEMINI_API_KEY` are never hardcoded; fail loudly on startup if missing.
+
+---
+
 ## License
 
 MIT
