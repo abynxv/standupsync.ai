@@ -1,5 +1,6 @@
 # StandupSync AI
 
+
 StandupSync is a productivity tool that automates daily standups and generates AI-powered weekly digests. It tracks team updates and produces actionable summaries using Google Gemini, backed by a FastAPI service layer with Celery-based async task processing.
 
 ---
