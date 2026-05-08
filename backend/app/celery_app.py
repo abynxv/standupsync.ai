@@ -1,4 +1,6 @@
 from celery import Celery
+from celery.schedules import crontab
+
 from app.core.config import settings
 
 celery_app = Celery("standupsync", broker=settings.CELERY_BROKER_URL)
@@ -9,13 +11,12 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # Celery Beat schedule is configured here or in main
-    beat_schedule = {
-        "weekly-digest": {
+    beat_schedule={
+        "weekly-digest-friday-9am": {
             "task": "app.tasks.digest.send_weekly_digests",
-            "schedule": 60.0 * 60 * 24 * 7,  # weekly (better use crontab in real app)
+            "schedule": crontab(hour=9, minute=0, day_of_week="friday"),
         }
-    }
+    },
 )
 
 celery_app.autodiscover_tasks(["app.tasks"])

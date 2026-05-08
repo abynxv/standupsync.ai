@@ -38,7 +38,15 @@ class Settings(BaseSettings):
 
     # AI API Keys
     GEMINI_API_KEY: Optional[str] = None
-    
+
+    # CORS — comma-separated origins allowed to call the API
+    # e.g. "http://localhost:5173,https://app.yourdomain.com"
+    FRONTEND_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [o.strip() for o in self.FRONTEND_ORIGINS.split(",") if o.strip()]
+
     model_config = SettingsConfigDict(case_sensitive=True, env_file=ENV_PATH, env_file_encoding='utf-8')
 
 settings = Settings()
