@@ -1,35 +1,44 @@
-import google.generativeai as genai
+import logging
+from typing import List
+
+from google import genai
+from google.genai import types
+
 from app.core.config import settings
 from app.db.models import StandupEntry
-from typing import List
+
+logger = logging.getLogger(__name__)
+
 
 def generate_summary(entries: List[StandupEntry]) -> str:
     if not settings.GEMINI_API_KEY:
-        return "AI Summary: API Key missing. Please configure GEMINI_API_KEY."
+        return "AI summary unavailable: GEMINI_API_KEY is not configured."
 
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
-    
-    # Format entries for the prompt
-    entries_text = ""
-    for entry in entries:
-        entries_text += f"- Date: {entry.date.date()}\n"
-        entries_text += f"  Did: {entry.did_yesterday}\n"
-        entries_text += f"  Doing: {entry.doing_today}\n"
-        entries_text += f"  Blockers: {entry.blockers or 'None'}\n\n"
-    
-    prompt = f"""
-    You are an AI assistant helping a developer summarize their weekly standups.
-    Below are the standup entries for the past week:
-    
-    {entries_text}
-    
-    Please provide a concise, professional paragraph summarizing the key accomplishments, 
-    upcoming focus, and any persistent blockers. Keep it clean and readable for a team lead.
-    """
-    
+    entries_text = "\n".join(
+        f"- {entry.date.date()}  |  Did: {entry.did_yesterday}  |  "
+        f"Doing: {entry.doing_today}  |  Blockers: {entry.blockers or 'None'}"
+        for entry in entries
+    )
+
+    prompt = (
+        "You are an engineering manager writing a brief weekly update for a developer.\n"
+        "Given the standup entries below, write a single concise paragraph (3-5 sentences) "
+        "covering: key accomplishments, current focus, and any recurring blockers. "
+        "Be factual, professional, and skip filler phrases.\n\n"
+        f"{entries_text}"
+    )
+
     try:
-        response = model.generate_content(prompt)
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                max_output_tokens=300,
+                temperature=0.4,
+            ),
+        )
         return response.text
-    except Exception as e:
-        return f"AI Summary: Failed to generate summary. Error: {str(e)}"
+    except Exception as exc:
+        logger.error(f"Gemini API call failed: {exc}", exc_info=True)
+        return f"AI summary generation failed: {exc}"
