@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: beat
-          image: abynxv/standupsync-backend:latest
+          image: abynxv/standupsync-backend:ace528a
           imagePullPolicy: IfNotPresent
           command: ["uv", "run", "celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
           envFrom:
