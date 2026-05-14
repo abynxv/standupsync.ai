@@ -1,10 +1,12 @@
 # ConfigMap stores non-sensitive configuration as key-value pairs.
-# All deployments reference this ConfigMap for environment variables.
 #
-# KEY CONCEPT: Notice the hostnames are Kubernetes Service names
-# (postgres-service, redis-service), not "localhost" or container names.
-# In K8s, each Service gets a DNS entry within the cluster, so Pods
-# find each other by Service name, not by IP address.
+# KEY CONCEPT: Hostnames are Kubernetes Service names (postgres-service,
+# redis-service), not "localhost". K8s gives each Service an internal DNS
+# entry so Pods find each other by name, not IP.
+#
+# DATABASE_URL is intentionally NOT here — it embeds the password in plaintext.
+# Instead we supply individual POSTGRES_* vars and let the app build the URI.
+# The password comes from the Secret (see secret.yaml).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,8 +15,20 @@ metadata:
   labels:
     app: standupsync
 data:
-  DATABASE_URL: "postgresql://postgres:postgres@postgres-service:5432/standupsync"
+  # Database — individual vars; app builds URI from these + POSTGRES_PASSWORD secret
+  POSTGRES_SERVER: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "postgres"
+  POSTGRES_DB: "standupsync"
+
+  # Celery
   CELERY_BROKER_URL: "redis://redis-service:6379/0"
   CELERY_RESULT_BACKEND: "redis://redis-service:6379/0"
+
+  # App
   PROJECT_NAME: "StandupSync"
   API_V1_STR: "/api/v1"
+
+  # CORS — comma-separated list of allowed frontend origins
+  # Update this to your real domain in production
+  FRONTEND_ORIGINS: "http://standupsync.local,http://localhost:5173"

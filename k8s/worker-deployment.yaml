@@ -1,14 +1,11 @@
 # Celery Worker Deployment
 #
-# This uses the SAME Docker image as the backend, but overrides the startup
-# command to run the Celery worker instead of Uvicorn.
+# Same image as the backend — different entrypoint command runs the worker.
+# Workers pull tasks from Redis and execute them (AI digest generation, etc.).
+# No Service needed — workers are pull-based, they never receive inbound traffic.
 #
-# KEY CONCEPT: In Docker Compose, we did the same thing — the "worker" service
-# uses `build: ./backend` (same image) but sets a different `command`.
-# In K8s, we override the command with `args`.
-#
-# NO SERVICE NEEDED: Workers don't receive HTTP traffic. They only consume
-# tasks from the Redis queue and process them. They're "pull-based", not "push-based".
+# Scale replicas up for higher task throughput (each worker processes in parallel).
+# GEMINI_API_KEY is required here because workers call the Gemini API for digests.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,7 +15,7 @@ metadata:
     app: standupsync
     component: worker
 spec:
-  replicas: 1                  # Scale up for higher task throughput
+  replicas: 1
   selector:
     matchLabels:
       app: standupsync
@@ -32,22 +29,27 @@ spec:
       containers:
         - name: worker
           image: abynxv/standupsync-backend:latest
-          imagePullPolicy: Never   # Use locally loaded image
+          imagePullPolicy: IfNotPresent
           command: ["uv", "run", "celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
           envFrom:
             - configMapRef:
                 name: standupsync-config
           env:
-            - name: GEMINI_API_KEY
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: standupsync-secret
-                  key: GEMINI_API_KEY
+                  key: POSTGRES_PASSWORD
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: standupsync-secret
                   key: SECRET_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: GEMINI_API_KEY
           resources:
             requests:
               cpu: "250m"

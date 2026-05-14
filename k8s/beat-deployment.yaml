@@ -1,11 +1,14 @@
 # Celery Beat Deployment (Scheduler)
 #
-# Beat is the periodic task scheduler. It wakes up at configured intervals
-# and publishes tasks to the Redis queue for workers to consume.
+# Beat publishes scheduled tasks (e.g., weekly digest every Friday 9 AM UTC)
+# to the Redis queue. Workers pick them up and execute.
 #
-# CRITICAL: replicas MUST be 1. If you run multiple Beat instances, each one
-# will schedule the same tasks independently, causing duplicate execution
-# (e.g., sending the weekly digest email twice).
+# CRITICAL — replicas MUST stay at 1.
+# Multiple Beat instances each schedule tasks independently, causing duplicates
+# (sending the weekly digest email twice, writing two WeeklySummary rows, etc.).
+# There is no built-in distributed lock in Celery Beat — one replica, always.
+#
+# GEMINI_API_KEY is needed because Beat triggers tasks that call the Gemini API.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +18,7 @@ metadata:
     app: standupsync
     component: beat
 spec:
-  replicas: 1                  # NEVER increase this — causes duplicate tasks
+  replicas: 1               # NEVER scale this above 1 — causes duplicate task execution
   selector:
     matchLabels:
       app: standupsync
@@ -29,17 +32,27 @@ spec:
       containers:
         - name: beat
           image: abynxv/standupsync-backend:latest
-          imagePullPolicy: Never   # Use locally loaded image
+          imagePullPolicy: IfNotPresent
           command: ["uv", "run", "celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
           envFrom:
             - configMapRef:
                 name: standupsync-config
           env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: POSTGRES_PASSWORD
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: standupsync-secret
                   key: SECRET_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: standupsync-secret
+                  key: GEMINI_API_KEY
           resources:
             requests:
               cpu: "100m"
