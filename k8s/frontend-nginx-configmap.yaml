@@ -1,0 +1,49 @@
+# Custom Nginx config for the React SPA.
+#
+# WHY THIS IS NEEDED:
+# React Router handles routing client-side. When a user refreshes the browser
+# on /dashboard or /admin, Nginx receives the request and looks for a file at
+# that path — which doesn't exist — and returns 404.
+#
+# The fix is `try_files $uri $uri/ /index.html`: Nginx first looks for a real
+# file, then a directory, and if neither exists falls back to index.html.
+# React Router then reads the URL and renders the correct view.
+#
+# This ConfigMap is mounted into the frontend container at
+# /etc/nginx/conf.d/default.conf, overriding the default Nginx config.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: standupsync
+  labels:
+    app: standupsync
+    component: frontend
+data:
+  default.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # SPA fallback — unknown paths serve index.html for React Router
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Cache hashed static assets indefinitely (Vite adds content hashes)
+        location ~* \.(js|css|woff2?|png|jpg|jpeg|svg|ico|gif)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+            access_log off;
+        }
+
+        # Don't cache index.html — browser must always fetch the latest shell
+        location = /index.html {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+
+        gzip on;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+        gzip_min_length 1024;
+    }
