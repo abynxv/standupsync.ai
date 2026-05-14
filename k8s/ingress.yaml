@@ -1,26 +1,17 @@
 # Ingress — Routes external HTTP traffic to internal Services
 #
 # HOW IT WORKS:
-# Ingress is like an Nginx reverse proxy at the cluster edge.
-# It looks at the URL path and routes traffic to the correct Service:
-#   /api/*  →  backend-service:8000
-#   /*      →  frontend-service:80
+# Paths are matched in order. /api prefix goes to the backend; everything
+# else goes to the frontend Nginx (which handles SPA fallback internally).
 #
-# This means you access EVERYTHING through a single URL (the Minikube IP),
-# and the Ingress decides where to send each request.
+# CRITICAL: No rewrite-target annotation here. With rewrite-target the ingress
+# controller strips the matched path prefix before forwarding — so /api/v1/auth
+# would arrive at the backend as /v1/auth and 404. We forward the full path as-is.
 #
 # MINIKUBE SETUP:
-# You need to enable the ingress addon first:
 #   minikube addons enable ingress
-#
-# Then get the Minikube IP:
-#   minikube ip
-#
-# Access the app at: http://<minikube-ip>/
-#
-# OPTIONAL: Add a hosts entry for a nice domain:
 #   echo "$(minikube ip) standupsync.local" | sudo tee -a /etc/hosts
-#   Then access: http://standupsync.local/
+#   # Then open: http://standupsync.local/
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -29,24 +20,33 @@ metadata:
   labels:
     app: standupsync
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 spec:
   ingressClassName: nginx
   rules:
-    - host: standupsync.local           # Optional: remove for IP-based access
+    - host: standupsync.local
       http:
         paths:
-          # API routes — anything starting with /api goes to backend
-          - path: /api/(.*)
-            pathType: ImplementationSpecific
+          # /api/* → backend (full path forwarded — no rewrite)
+          - path: /api
+            pathType: Prefix
             backend:
               service:
                 name: backend-service
                 port:
                   number: 8000
-          # Everything else goes to frontend
-          - path: /(.*)
-            pathType: ImplementationSpecific
+          # /health → backend health check
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8000
+          # /* → frontend SPA (nginx handles React Router internally)
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: frontend-service
