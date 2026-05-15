@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: abynxv/standupsync-frontend:ace528a
+          image: abynxv/standupsync-frontend:628f227
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
