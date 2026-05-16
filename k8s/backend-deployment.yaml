@@ -34,7 +34,7 @@ spec:
     spec:
       initContainers:
         - name: migrate
-          image: abynxv/standupsync-backend:509c7d4
+          image: abynxv/standupsync-backend:66cb495
           imagePullPolicy: IfNotPresent
           command: ["uv", "run", "alembic", "upgrade", "head"]
           envFrom:
@@ -49,7 +49,7 @@ spec:
 
       containers:
         - name: backend
-          image: abynxv/standupsync-backend:509c7d4
+          image: abynxv/standupsync-backend:66cb495
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
