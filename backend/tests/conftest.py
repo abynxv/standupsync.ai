@@ -10,6 +10,7 @@ SQLite limitations vs PostgreSQL:
 These are acceptable trade-offs for fast, dependency-free unit tests.
 """
 import pytest
+import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -45,7 +46,15 @@ def db_session():
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # users.team_id → teams AND teams.created_by → users form a cycle.
+        # SQLAlchemy's sorted_tables/drop_all cannot resolve it on SQLite.
+        # Bypass by disabling FK checks and dropping via raw SQL in any order.
+        with engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            for table_name in Base.metadata.tables:
+                conn.execute(sa.text(f"DROP TABLE IF EXISTS [{table_name}]"))
+            conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 @pytest.fixture(scope="function")
